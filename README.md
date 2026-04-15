@@ -1,8 +1,10 @@
+<div align="center">                                                                                       
+<img src="logo.jpg" alt="SJTU Classical Chinese Culture Club" height="60">                 
+</div>
+
 <div align="center">
 
-# NEO-CLASSIC
-
-**A Benchmark for Evaluating Linguistic-Aesthetic Reasoning in Classical Chinese Poetry**
+# NEO-CLASSIC: A Benchmark for Evaluating Linguistic-Aesthetic Reasoning in Classical Chinese Poetry
 
 Han Zhang<sup>1,\*</sup> &ensp; Zihan Gu<sup>2,\*</sup> &ensp; Zhiyuan Wang<sup>1</sup> &ensp; Tianyi Ma<sup>1</sup> &ensp; Jiacheng Lu<sup>1</sup> &ensp; Xinyan Zhang<sup>4</sup> &ensp; Yuhao Wei<sup>3</sup> &ensp; Cheng Hua<sup>1,†</sup>
 
