@@ -1,293 +1,276 @@
-# PoemBench
+<div align="center">
 
-PoemBench 是一个中文古典诗词基准测试框架，用于评估大语言模型在诗词理解任务上的表现。
+# NEO-CLASSIC
 
-**[Contributors 林雨夜]**<sup>1*†</sup>&ensp; http://lyy0323.space
-**[Contributors 抱木]**<sup>2</sup>&ensp;
+**A Benchmark for Evaluating Linguistic-Aesthetic Reasoning in Classical Chinese Poetry**
 
-**致谢：** 上海交大国学社全体驻站诗人
+Han Zhang<sup>1,\*</sup> &ensp; Zihan Gu<sup>2,\*</sup> &ensp; Zhiyuan Wang<sup>1</sup> &ensp; Tianyi Ma<sup>1</sup> &ensp; Jiacheng Lu<sup>1</sup> &ensp; Xinyan Zhang<sup>4</sup> &ensp; Yuhao Wei<sup>3</sup> &ensp; Cheng Hua<sup>1,†</sup>
 
-<sup>1</sup>SJTU&emsp;<sup>2</sup>IIE
+<sup>1</sup>Shanghai Jiao Tong University &emsp; <sup>2</sup>Institute of Information Engineering, CAS &emsp; <sup>3</sup>UCAS &emsp; <sup>4</sup>Independent Researcher
 
-<br>
-<small>* <b>Dataset Collection Lead</b> &emsp; † <b>Q&A Design Lead</b></small>
+<sup>\*</sup>Equal contribution &emsp; <sup>†</sup>Corresponding author
 
-[![Paper]()](link)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue)](link)
+[![Paper](https://img.shields.io/badge/Paper-ACL_2026-red)](link)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE)
+[![Data](https://img.shields.io/badge/Data-41_Tasks-green)](#benchmark-tasks)
 
 </div>
 
+## Overview
 
-## 特性
+While Large Language Models achieve high accuracy on established Classical Chinese Poetry (CCP) benchmarks, it remains difficult to distinguish transferable **Linguistic-Aesthetic Reasoning** from reliance on familiar pre-training patterns. **NEO-CLASSIC** addresses this by combining:
 
-- 支持本地模型（HuggingFace Transformers）和多种 API 模型
-- 提供指令遵循率（IFR）和指令遵循下准确率（Acc|IF）两个关键指标
-- 支持随机抽样评估，保证可重复性（默认种子 1127）
-- 结果按模型名称分目录保存
+1. A **constructionist Out-of-Sample (OOS) dataset** of 1,406 strictly metrical works authored by 30 contemporary poets, reducing the possibility of direct retrieval from training corpora.
+2. A suite of **5 reverse-understanding probes** (41 task variations, 2,500 questions each) designed to test hierarchical constraint satisfaction across phonological, syntactic, and discourse dimensions.
 
-## 安装
+### Key Findings
 
-```bash
-pip install -r requirements.txt
+- **Memorization Gap (20%–50%)**: Model performance drops substantially when shifting from historical to contemporary texts across all tasks, while human expert performance remains stable.
+- **Structural Collapse in Global Planning**: Standard LLMs achieve near-zero accuracy (0–13%) on discourse-level sentence reordering (*Lyu*, 8 lines). Even with expert-level guidance, the best model (Gemini-3-Pro) reaches 36%, compared to 48% by human experts.
+- **Domain Fine-tuning ≠ Reasoning**: Domain-specialized models (Yi-34B, Xunzi-Qwen3-8B) generally underperform general-purpose SOTA models, suggesting broad pre-training scale matters more than classical-text fine-tuning.
 
-# 根据需要安装 API 客户端
-pip install openai          # OpenAI / 兼容 API
-pip install anthropic       # Anthropic Claude
-pip install zhipuai         # 智谱 GLM
-pip install dashscope       # 阿里云 Qwen
+## Benchmark Tasks
+
+NEO-CLASSIC defines 5 behavioral probes targeting different constraint levels of CCP:
+
+| Probe | Task | Constraint Level | What It Tests |
+|-------|------|-----------------|---------------|
+| **GuessAuthor** | Authorship attribution (0/1/3/10-shot) | Stylistic | Extracting idiolect without memorization |
+| **Guess*Ci*Tone** | *Cipai* (tone pattern) identification | Phonological | Character counting & tonal mapping |
+| **GuessWord** | Cloze test with controlled distractors | Phonological + Syntactic | Constraint recognition & intra-sentential understanding |
+| **MatchSentence** | Couplet matching (upper ↔ lower line) | Syntactic (Parallelism) | Understanding of *Duizhang* |
+| **SortPoem** | Sentence reordering (*Jue*: 4 lines, *Lyu*: 8 lines) | Discourse (Global) | Hierarchical planning over *Qi-Cheng-Zhuan-He* |
+
+Random-chance baselines: 25% for all multiple-choice tasks; ~4.2% for *Jue* sorting (1/4!); ~0.002% for *Lyu* sorting (1/8!).
+
+## Dataset
+
+### Data Sources
+
+| Corpus | Description | Purpose |
+|--------|-------------|---------|
+| **Today** (Contemporary) | 1,406 works by 30 contemporary poets (2010–2025), strictly metrical, pseudonymized | OOS testbed (core contribution) |
+| **Tang** | Top-10 canonical poets + 15% stratified sample from *Quantangshi*, metric-checked | Historical control |
+| **Tang300** | *300 Tang Poems* — high-familiarity canonical works | High-memorization baseline |
+| **TangSong** | Combined *Quantangshi* + *Quansongshi* | Broad linguistic reference |
+| **Song** | *Quansongci* | Genre-specific control for *Ci* |
+
+### Data File Naming
+
+```
+{corpus}.{task}.{variant}.jsonl
 ```
 
-## 快速开始
+- **Corpus**: `tang`, `song`, `tang300`, `tangsong`, `today`
+- **Task**: `guess_author`, `guess_word`, `guess_ci_tone`, `match_sentence`, `sort_poem`
+- **Variant**: `standard`, `fewshot1/3/10`, `cot`, `couplets`, `jue`, `lyu`, `lyu_cot_expert`
 
-### 评估本地模型
+### Contamination Control
+
+The contemporary corpus passes both 7-gram and 14-gram similarity detection against the `chinese-poetry` historical corpus:
+- 7-gram: 9 occurrences (63 chars, 0.09% of total), from occasional classical citations
+- 14-gram: zero matches
+
+## Installation
 
 ```bash
-# 基础用法
+git clone https://github.com/lyy0323/NEO-CLASSIC.git
+cd NEO-CLASSIC
+pip install -r requirements.txt
+```
+
+Optional API clients:
+
+```bash
+pip install openai          # OpenAI / compatible APIs
+pip install anthropic       # Anthropic Claude
+pip install zhipuai         # Zhipu GLM
+pip install dashscope       # Alibaba Qwen
+```
+
+## Quick Start
+
+### Evaluate a Local Model
+
+```bash
+# Basic usage
 python scripts/eval_local.py --model-path ./models/Qwen3-4B
 
-# 使用配置文件
+# With config file
 python scripts/eval_local.py --config configs/models/qwen3_4b_local.yaml
 
-# 随机抽样 100 个样本
+# Random sampling (100 samples)
 python scripts/eval_local.py --model-path ./models/Qwen3-4B --sample-n 100
 ```
 
-### 评估 API 模型
+### Evaluate an API Model
 
 ```bash
-# 使用配置文件
+# With config file
 python scripts/eval_api.py --config configs/models/openai_gpt4o.yaml
 
-# 命令行指定参数
+# Command-line arguments
 python scripts/eval_api.py --model-type openai --model-name gpt-4o
 
-# 随机抽样
+# Random sampling
 python scripts/eval_api.py --config configs/models/openai_gpt4o.yaml --sample-n 100
 ```
 
-### 批量评估
+### Batch Evaluation
 
 ```bash
-# 评估目录下所有模型配置
+# All model configs in a directory
 python scripts/eval_batch.py --config-dir configs/models/
 
-# 指定多个配置文件
+# Specific configs
 python scripts/eval_batch.py --configs configs/models/qwen3_4b_local.yaml configs/models/openai_gpt4o.yaml
 
-# 带抽样的批量评估
+# With sampling
 python scripts/eval_batch.py --config-dir configs/models/ --sample-n 100 --seed 1127
 ```
 
-### 查看数据集
+### List Available Datasets
 
 ```bash
 python scripts/list_datasets.py
 python scripts/list_datasets.py --corpus tang --task guess_author
 ```
 
-## 添加新模型
+## Adding New Models
 
-### 添加本地模型
+Create a YAML config in `configs/models/`:
 
-在 `configs/models/` 目录下创建 YAML 配置文件：
+<details>
+<summary>Local Model (HuggingFace)</summary>
 
 ```yaml
-# configs/models/my_local_model.yaml
 model_name: "my-model"
 model_type: "local"
-model_path: "./models/MyModel"  # HuggingFace 模型路径
-device: "auto"                   # auto, cuda, cpu
-torch_dtype: "float16"           # float16, bfloat16, float32
-
-# 生成参数
+model_path: "./models/MyModel"
+device: "auto"
+torch_dtype: "float16"
 max_new_tokens: 128
 temperature: 0.1
 top_p: 0.9
 ```
+</details>
 
-### 添加 API 模型
-
-#### OpenAI / 兼容 API
+<details>
+<summary>OpenAI / Compatible API</summary>
 
 ```yaml
-# configs/models/my_openai_model.yaml
 model_name: "gpt-4o"
 model_type: "openai"
-api_key: "$OPENAI_API_KEY"      # 使用环境变量
+api_key: "$OPENAI_API_KEY"
 api_model_name: "gpt-4o"
-# api_base: "https://custom-endpoint.com/v1"  # 可选：自定义端点
-
+# api_base: "https://custom-endpoint.com/v1"  # optional
 max_new_tokens: 128
 temperature: 0.1
 ```
+</details>
 
-#### Anthropic Claude
+<details>
+<summary>Anthropic Claude</summary>
 
 ```yaml
-# configs/models/claude.yaml
 model_name: "claude-3-5-sonnet"
 model_type: "anthropic"
 api_key: "$ANTHROPIC_API_KEY"
 api_model_name: "claude-3-5-sonnet-20241022"
-
 max_new_tokens: 128
 temperature: 0.1
 ```
+</details>
 
-#### 智谱 GLM
-
-```yaml
-# configs/models/glm.yaml
-model_name: "glm-4"
-model_type: "zhipu"
-api_key: "$ZHIPUAI_API_KEY"
-api_model_name: "glm-4"
-
-max_new_tokens: 128
-temperature: 0.1
-```
-
-#### 阿里云 Qwen
+<details>
+<summary>DeepSeek</summary>
 
 ```yaml
-# configs/models/qwen_api.yaml
-model_name: "qwen-turbo"
-model_type: "qwen_api"
-api_key: "$DASHSCOPE_API_KEY"
-api_model_name: "qwen-turbo"
-
-max_new_tokens: 128
-temperature: 0.1
-```
-
-#### DeepSeek
-
-```yaml
-# configs/models/deepseek.yaml
 model_name: "deepseek-chat"
 model_type: "deepseek"
 api_key: "$DEEPSEEK_API_KEY"
 api_base: "https://api.deepseek.com"
 api_model_name: "deepseek-chat"
-
 max_new_tokens: 128
 temperature: 0.1
 ```
+</details>
 
-### 添加自定义 API 模型
+<details>
+<summary>Other APIs (Zhipu GLM, Alibaba Qwen)</summary>
 
-1. 在 `src/models/api_model.py` 中继承 `APIModel` 类：
-
-```python
-class MyCustomModel(APIModel):
-    def load(self) -> None:
-        # 初始化 API 客户端
-        self.client = MyClient(api_key=self.config.api_key)
-        self._loaded = True
-
-    def _call_api(self, prompt: str) -> GenerationResult:
-        start_time = time.time()
-        try:
-            response = self.client.generate(prompt)
-            return GenerationResult(
-                response=response.text,
-                latency=time.time() - start_time,
-                success=True
-            )
-        except Exception as e:
-            return GenerationResult(
-                response="",
-                latency=time.time() - start_time,
-                success=False,
-                error_message=str(e)
-            )
+```yaml
+# Zhipu GLM
+model_name: "glm-4"
+model_type: "zhipu"
+api_key: "$ZHIPUAI_API_KEY"
+api_model_name: "glm-4"
 ```
 
-2. 在 `src/models/registry.py` 中注册：
-
-```python
-class ModelRegistry:
-    _models: Dict[str, Type[BaseModel]] = {
-        # ... 现有模型
-        "my_custom": MyCustomModel,
-    }
+```yaml
+# Alibaba Qwen
+model_name: "qwen-turbo"
+model_type: "qwen_api"
+api_key: "$DASHSCOPE_API_KEY"
+api_model_name: "qwen-turbo"
 ```
+</details>
 
-## 评估指标
+## Evaluation Metrics
 
-| 指标 | 说明 |
-|------|------|
-| **IFR** (Instruction Following Rate) | 指令遵循率：模型回复符合预期格式的比例 |
-| **Acc\|IF** (Accuracy if Followed) | 指令遵循下准确率：在格式正确的回复中，答案正确的比例 |
-| **Accuracy** | 总体准确率：正确答案数 / 总样本数 |
+| Metric | Description |
+|--------|-------------|
+| **IFR** (Instruction Following Rate) | Proportion of responses that conform to the expected format |
+| **Acc\|IF** (Accuracy given IF) | Accuracy among format-compliant responses |
+| **Accuracy** | Overall accuracy: correct / total |
 
-输出示例：
-```
-Dataset                             IFR        Acc|IF     Accuracy   Correct/Total
-----------------------------------------------------------------------------------------------------
-tang.guess_author.standard          98.50%     45.20%     44.52%     223/500
-tang.guess_word.standard            99.20%     52.10%     51.68%     258/500
-----------------------------------------------------------------------------------------------------
-Overall                             98.85%     48.65%     48.10%     481/1000
-```
-
-## 数据集
-
-### 命名规则
-
-`{corpus}.{task}.{variant}.jsonl`
-
-- **Corpus**: tang, song, tang300, tangsong, today
-- **Task**: guess_author, guess_word, guess_ci_tone, match_sentence, sort_poem
-- **Variant**: standard, fewshot1/3/10, cot, couplets, jue, lyu
-
-### 任务类型
-
-| 任务 | 类型 | 说明 |
-|------|------|------|
-| guess_author | 选择题 | 猜测诗句作者 |
-| guess_word | 选择题 | 填空选词 |
-| guess_ci_tone | 选择题 | 猜测词牌名 |
-| match_sentence | 选择题 | 匹配上下句 |
-| sort_poem | 排序题 | 诗句排序（绝句4句/律诗8句）|
-
-## 结果输出
-
-评估结果保存在 `results/{model_name}/` 目录：
+## Project Structure
 
 ```
-results/
-└── gpt-4o/
-    ├── eval_20241128_143052.json  # 完整评估结果（含详细数据）
-    └── summary.txt                 # 可读的汇总表格
-```
-
-## 项目结构
-
-```
-poembanch/
+NEO-CLASSIC/
 ├── src/
-│   ├── models/              # 模型实现
-│   │   ├── base.py          # 基类 BaseModel, ModelConfig
-│   │   ├── local_model.py   # 本地模型（HuggingFace）
-│   │   ├── api_model.py     # API 模型
-│   │   └── registry.py      # 模型注册表
-│   ├── evaluation/          # 评估流水线
-│   │   ├── dataset.py       # 数据集加载（支持抽样）
-│   │   ├── prompt.py        # Prompt 构建与响应解析
-│   │   ├── metrics.py       # 指标计算（IFR, Acc|IF）
-│   │   └── pipeline.py      # 评估流水线
+│   ├── models/              # Model implementations
+│   │   ├── base.py          # BaseModel, ModelConfig
+│   │   ├── local_model.py   # Local models (HuggingFace)
+│   │   ├── api_model.py     # API models
+│   │   └── registry.py      # Model registry
+│   ├── evaluation/          # Evaluation pipeline
+│   │   ├── dataset.py       # Dataset loading (with sampling)
+│   │   ├── prompt.py        # Prompt construction & response parsing
+│   │   ├── metrics.py       # Metrics computation (IFR, Acc|IF)
+│   │   └── pipeline.py      # Evaluation pipeline
 │   └── utils/
-│       ├── config.py        # 配置加载
-│       └── logger.py        # 日志工具
-├── scripts/                 # CLI 脚本
-│   ├── eval_local.py        # 评估本地模型
-│   ├── eval_api.py          # 评估 API 模型
-│   ├── eval_batch.py        # 批量评估
-│   └── list_datasets.py     # 列出数据集
+│       ├── config.py        # Config loading
+│       └── logger.py        # Logging utilities
+├── scripts/                 # CLI scripts
+│   ├── eval_local.py        # Evaluate local models
+│   ├── eval_api.py          # Evaluate API models
+│   ├── eval_batch.py        # Batch evaluation
+│   └── list_datasets.py     # List datasets
 ├── configs/
-│   ├── models/              # 模型配置
-│   └── eval/                # 评估配置
-├── data/                    # 数据集
-└── results/                 # 评估结果
+│   ├── models/              # Model configs
+│   └── eval/                # Evaluation configs
+├── data/                    # 41 task files (JSONL)
+└── results/                 # Evaluation results
 ```
+
+## Citation
+
+```bibtex
+@inproceedings{zhang2026neoclassic,
+  title={Neo-Classic: A Benchmark for Evaluating Linguistic-Aesthetic Reasoning in Classical Chinese Poetry},
+  author={Zhang, Han and Gu, Zihan and Wang, Zhiyuan and Ma, Tianyi and Lu, Jiacheng and Zhang, Xinyan and Wei, Yuhao and Hua, Cheng},
+  booktitle={Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics (ACL)},
+  year={2026}
+}
+```
+
+## Acknowledgments
+
+This research originated from the **SJTU Classical Chinese Culture Club** ([guoxue_sjtu@163.com](mailto:guoxue_sjtu@163.com)). We are deeply grateful to the 30 contemporary poets who authorized the use of their works for this benchmark.
+
+Cheng Hua is partly supported by the National Natural Science Foundation of China (72301172) and Shanghai Jiao Tong University Office of Liberal Arts (ZHWK2502).
+
+## License
+
+This project is licensed under the [Apache License 2.0](LICENSE).
